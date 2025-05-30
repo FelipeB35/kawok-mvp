@@ -3,7 +3,7 @@ from flask import Flask, flash, redirect, render_template, request, session, jso
 from flask_session import Session
 from werkzeug.security import check_password_hash, generate_password_hash
 import psycopg2
-from kawok.helpers import apology, login_required, lookup, usd
+from helpers import apology, login_required, lookup, usd
 
 
 # Configure application
@@ -14,14 +14,8 @@ app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
 
 # Database connection
-conn = psycopg2.connect(
-    host="localhost",
-    database="nombre_de_tu_base",
-    user="tu_usuario",
-    password="tu_password"
-)
 
-db = conn.cursor()
+#db = SQL("postgresql://postgres:12345@127.0.0.1/kawok_mvp")
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -72,3 +66,20 @@ def logout():
 
     # Redirect user to login form
     return redirect("/")
+
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if request.method == "POST":
+        # Save step 1 data to session
+        pass
+        return redirect("/register2")
+    return render_template("register.html")
+
+@app.route("/register2", methods=["GET", "POST"])
+def register2():
+    # Ensure step 1 data exists
+    if request.method == "POST":
+        pass
+    return render_template("register2.html")
+
