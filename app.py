@@ -61,26 +61,27 @@ def login():
 
         # Query database for username
         cur.execute(
-            "SELECT * FROM usuarios WHERE usuario = %s", (request.form.get("username"),)
+            "SELECT * FROM usuarios WHERE usuario = %s", (user,)
         )
         rows = cur.fetchall()
 
-        if rows:
-            print(rows)
-            print(user)
-            print(password)
+        
+        print(rows)
+        print(user)
+        print(password)
+
         # Ensure user and password is correct
         if len(rows) != 1 or not check_password_hash(
-            rows[0]["contraseña"], password
+            rows[0][3], password
         ):
             return apology("Contraseña o usuario inválidos.", 400)
 
 
         # Remember which user has logged in
-        session["user_id"] = rows[0]["id"]
+        session["user_id"] = rows[0][0]
 
         # Redirect user to home page
-        return redirect("/")
+        return redirect("/home")
 
     # User reached route via GET (as by clicking a link or via redirect)
     else:
@@ -287,3 +288,8 @@ def register3():
     datos_usuario = session.get("register_step3", {})
     return render_template("register3.html", user_type=user_type, datos_usuario=datos_usuario)
 
+
+@app.route("/home")
+@login_required
+def home():
+    return render_template("home.html")
