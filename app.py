@@ -76,7 +76,8 @@ def login():
 
         # Remember which user has logged in
         session["user_id"] = rows[0][0]
-
+        session["username"] = rows[0][2]
+        
         # Redirect user to home page
         return redirect("/home")
 
@@ -327,3 +328,9 @@ def discover():
         cur.execute("SELECT nombre_artista, imagen_artista FROM artists")
         cards = cur.fetchall()
     return render_template("discover.html", user_type=user_type, cards=cards)
+
+@app.route("/profile")
+@login_required
+def profile():
+    return render_template("profile.html", username=session.get("username"))
+

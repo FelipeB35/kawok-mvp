@@ -31,6 +31,9 @@
                             <a class="nav-link" href="/profile">
                                 <span class="material-icons align-middle">account_circle</span>
                                 Perfil
+                                <span class="ms-1 text-primary fw-bold">
+                                    {{ session.get("username") }}
+                                </span>
                             </a>
                         </li>
                         <li class="nav-item">
