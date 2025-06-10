@@ -66,9 +66,6 @@ def login():
         rows = cur.fetchall()
 
         
-        print(rows)
-        print(user)
-        print(password)
 
         # Ensure user and password is correct
         if len(rows) != 1 or not check_password_hash(
@@ -98,6 +95,11 @@ def logout():
     # Redirect user to login form
     return redirect("/")
 
+@app.route("/clear_session")
+def clear_session():
+    session.clear()
+    return "Sesión limpiada"
+
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -106,6 +108,7 @@ def register():
     user_type = session.get("register_user_type", "artista")
 
     if request.method == "POST":
+        print("POST data:", request.form)
         if user_type not in ["artista", "venue"]:
             return apology("Debes seleccionar un tipo de usuario", 400)
 
@@ -156,6 +159,8 @@ def register2():
     generos = cur.fetchall()
 
     if request.method == "POST":
+        print("POST data:", request.form)
+        print("user_type:", user_type)
         # Validate required fields
         if not request.form.get("telefono"):
             return apology("Debes proporcionar un número de teléfono", 400)
@@ -167,7 +172,7 @@ def register2():
                 return apology("Debes proporcionar un número de DUI", 400)
             if not request.form.get("nombre_artista"):
                 return apology("Debes proporcionar un nombre artístico", 400)
-            if not request.form.get("id_genero"):
+            if not request.form.get("genero"):
                 return apology("Debes seleccionar un género", 400)
             
         else:  # user_type == "venue"
@@ -202,6 +207,8 @@ def register2():
 
 @app.route("/register3", methods=["GET", "POST"])
 def register3():
+    print("register_step1:", session.get("register_step1"))
+    print("register_user_type:", session.get("register_user_type"))
     user_type = session.get("register_user_type", "artista")
     if request.method == "POST":
         # Validiate required fields
@@ -215,11 +222,18 @@ def register3():
         # Save the uploaded image
         image = request.files["image_upload"]
         if image and image.filename != "":
-            ext = os.path.splitext(secure_filename(image.filename))[1]  # obtiene la extensión
+            ext = os.path.splitext(secure_filename(image.filename))[1]
             unique_name = f"{uuid.uuid4().hex}{ext}"
-            image_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_name)
+            # Elige la subcarpeta según el tipo de usuario
+            if user_type == "artista":
+                subfolder = "artistas"
+            else:
+                subfolder = "venues"
+            folder_path = os.path.join(app.config['UPLOAD_FOLDER'], subfolder)
+            os.makedirs(folder_path, exist_ok=True)  # Crea la carpeta si no existe
+            image_path = os.path.join(folder_path, unique_name)
             image.save(image_path)
-            image_db_path = f"uploads/{unique_name}"
+            image_db_path = f"uploads/{subfolder}/{unique_name}"
         else:
             image_db_path = None
 
@@ -259,7 +273,7 @@ def register3():
                 (
                     session["register_step2"]["nombre_artista"],
                     user_id, 
-                    session["register_step2"]["id_genero"],
+                    session["register_step2"]["genero"],
                     session["register_step3"]["fee_range"],
                     session["register_step3"]["descripcion"],
                     session["register_step3"]["image_upload"],
@@ -282,8 +296,9 @@ def register3():
             )
         conn.commit()
         # Clear the session data after successful registration
-        session.clear()
-
+        session.pop("register_step1", None)
+        session.pop("register_step2", None)
+        session.pop("register_step3", None)
         return redirect("/login")
     datos_usuario = session.get("register_step3", {})
     return render_template("register3.html", user_type=user_type, datos_usuario=datos_usuario)
@@ -292,4 +307,23 @@ def register3():
 @app.route("/home")
 @login_required
 def home():
-    return render_template("home.html")
+    user_type = session.get("register_user_type", "artista")
+    if user_type == "artista":
+        cur.execute("SELECT nombre_venue, imagen_venue FROM venues")
+        cards = cur.fetchall()
+    else:
+        cur.execute("SELECT nombre_artista, imagen_artista FROM artists")
+        cards = cur.fetchall()
+    return render_template("home.html", user_type=user_type, cards=cards)
+
+@app.route("/discover")
+@login_required
+def discover():
+    user_type = session.get("register_user_type", "artista")
+    if user_type == "artista":
+        cur.execute("SELECT nombre_venue, imagen_venue FROM venues")
+        cards = cur.fetchall()
+    else:
+        cur.execute("SELECT nombre_artista, imagen_artista FROM artists")
+        cards = cur.fetchall()
+    return render_template("discover.html", user_type=user_type, cards=cards)
