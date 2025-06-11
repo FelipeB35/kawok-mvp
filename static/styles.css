@@ -14,3 +14,21 @@ body {
 footer {
     flex-shrink: 0;
 }
+/* Cambia el color de las flechas a negro */
+.carousel-control-prev-icon,
+.carousel-control-next-icon {
+    filter: invert(1) grayscale(1) brightness(0.5);
+}
+
+/* Opcional: aumenta el tamaño de las flechas */
+.carousel-control-prev-icon,
+.carousel-control-next-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+}
+
+/* Opcional: separa las flechas del borde de las cards */
+.carousel-control-prev,
+.carousel-control-next {
+    width: 5%;
+}

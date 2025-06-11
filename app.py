@@ -37,6 +37,8 @@ cur = conn.cursor()
 @app.route("/")
 def index():
     """Show homepage"""
+    if session.get("user_id"):
+        return redirect("/home")
     return render_template("index.html")
 
 
@@ -78,6 +80,12 @@ def login():
         session["user_id"] = rows[0][0]
         session["username"] = rows[0][2]
         
+        cur.execute("SELECT 1 FROM artists WHERE id_usuario = %s", (session["user_id"],))
+        if cur.fetchone():
+            session["register_user_type"] = "artista"
+        else:
+            session["register_user_type"] = "venue"
+
         # Redirect user to home page
         return redirect("/home")
 
