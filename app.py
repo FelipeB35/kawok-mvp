@@ -329,11 +329,18 @@ def home():
 @login_required
 def discover():
     user_type = session.get("register_user_type", "artista")
+    search = request.args.get("q", "").strip()
     if user_type == "artista":
-        cur.execute("SELECT nombre_venue, imagen_venue FROM venues")
+        if search:
+            cur.execute("SELECT * FROM venues WHERE LOWER(nombre_venue) LIKE %s", (f"%{search.lower()}%",))
+        else:
+            cur.execute("SELECT * FROM venues")
         cards = cur.fetchall()
     else:
-        cur.execute("SELECT nombre_artista, imagen_artista FROM artists")
+        if search:
+            cur.execute("SELECT * FROM artists a JOIN generos b ON a.id_genero = b.id WHERE LOWER(a.nombre_artista) LIKE %s", (f"%{search.lower()}%",))
+        else:
+            cur.execute("SELECT * FROM artists a JOIN generos b ON a.id_genero = b.id")
         cards = cur.fetchall()
     return render_template("discover.html", user_type=user_type, cards=cards)
 
