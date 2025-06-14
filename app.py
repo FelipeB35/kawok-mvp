@@ -342,7 +342,10 @@ def discover():
         else:
             cur.execute("SELECT * FROM artists a JOIN generos b ON a.id_genero = b.id")
         cards = cur.fetchall()
-    return render_template("discover.html", user_type=user_type, cards=cards)
+
+    cur.execute("SELECT telefono FROM usuarios a JOIN artists b ON a.id = b.id_usuario")
+    telefono = cur.fetchall()
+    return render_template("discover.html", user_type=user_type, cards=cards, telefono=telefono)
 
 @app.route("/profile")
 @login_required
