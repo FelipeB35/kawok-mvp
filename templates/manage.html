@@ -1,0 +1,76 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Gestiona tus toques activos
+{% endblock %}
+
+{% block content %}
+<div class="container py-3" style="max-width: 500px;">
+    <h2 class="text-center mb-4">Administra tus Toques</h2>
+
+    {% if user_type == 'artista' %}
+        {% for booking in bookings %}
+            <div class="card mb-4">
+                <div class="d-flex align-items-center p-3">
+                    <img src="{{ url_for('static', filename=booking[6]) }}" alt="Venue" class="rounded me-3" style="width: 80px; height: 80px; object-fit: cover;">
+                    <div>
+                        <h5 class="mb-1">{{ booking[1] }}</h5>
+                        <div class="text-muted small">{{ booking[2] }}</div>
+                        <div>Fecha: {{ booking[3] }}</div>
+                        <div>Hora: {{ booking[4]|string|slice(0,5) }} - {{ booking[5]|string|slice(0,5) }}</div>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent border-0">
+                    <a href="#" class="btn btn-success w-100">Contactar</a>
+                </div>
+            </div>
+        {% else %}
+            <p class="text-center text-muted">No tienes toques activos.</p>
+        {% endfor %}
+    {% else %}
+        <h4 class="mb-3">Toques Activos</h4>
+        {% for booking in bookings %}
+            <div class="card mb-4">
+                <div class="d-flex align-items-center p-3">
+                    <img src="{{ url_for('static', filename=booking[6]) }}" alt="Artista" class="rounded me-3" style="width: 80px; height: 80px; object-fit: cover;">
+                    <div>
+                        <h5 class="mb-1">{{ booking[1] }}</h5>
+                        <div class="text-muted small">{{ booking[2] }}</div>
+                        <div>Fecha: {{ booking[3] }}</div>
+                        <div>Hora: {{ booking[4]|string|slice(0,5) }} - {{ booking[5]|string|slice(0,5) }}</div>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent border-0">
+                    <a href="#" class="btn btn-success w-100">Contactar</a>
+                </div>
+            </div>
+        {% else %}
+            <p class="text-center text-muted">No tienes toques activos.</p>
+        {% endfor %}
+
+        <h4 class="mb-3 mt-5">Solicitudes Pendientes</h4>
+        {% for req in requests %}
+            <div class="card mb-4">
+                <div class="d-flex align-items-center p-3">
+                    <img src="{{ url_for('static', filename=req[6]) }}" alt="Artista" class="rounded me-3" style="width: 80px; height: 80px; object-fit: cover;">
+                    <div>
+                        <h5 class="mb-1">{{ req[1] }}</h5>
+                        <div class="text-muted small">{{ req[2] }}</div>
+                        <div>Fecha: {{ req[3] }}</div>
+                        <div>Hora: {{ req[4]|string|slice(0,5) }} - {{ req[5]|string|slice(0,5) }}</div>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent border-0 d-flex gap-2">
+                    <form method="post" class="w-100">
+                        <input type="hidden" name="solicitud_id" value="{{ req[0] }}">
+                        <button type="submit" name="action" value="aceptar" class="btn btn-primary w-100 mb-1">Aceptar</button>
+                        <button type="submit" name="action" value="rechazar" class="btn btn-danger w-100">Rechazar</button>
+                    </form>
+                </div>
+            </div>
+        {% else %}
+            <p class="text-center text-muted">No tienes solicitudes pendientes.</p>
+        {% endfor %}
+    {% endif %}
+</div>
+{% endblock %}

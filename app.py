@@ -405,3 +405,65 @@ def book(venue_id):
     venue_name, venue_description, venue_image = venue
     return render_template("book.html", venue_name=venue_name, venue_description=venue_description, venue_image=venue_image)
 
+@app.route("/manage", methods=["GET", "POST"])
+@login_required
+def manage():
+    user_id = session.get("user_id")
+    user_type = session.get("register_user_type")
+
+    # Handle accept/reject actions for venues
+    if request.method == "POST" and user_type == "venue":
+        solicitud_id = request.form.get("solicitud_id")
+        action = request.form.get("action")
+        if solicitud_id and action in ["aceptar", "rechazar"]:
+            new_status = "aceptado" if action == "aceptar" else "rechazado"
+            cur.execute("UPDATE solicitudes SET estado = %s WHERE id = %s", (new_status, solicitud_id))
+            conn.commit()
+
+    if user_type == "artista":
+        # Get artist id
+        cur.execute("SELECT id FROM artists WHERE id_usuario = %s", (user_id,))
+        artist_row = cur.fetchone()
+        artist_id = artist_row[0] if artist_row else None
+
+        # Get accepted bookings for artist
+        cur.execute("""
+            SELECT s.id, v.nombre_venue, v.direccion, t.fecha, t.hora_inicio, t.hora_fin, v.imagen_venue
+            FROM solicitudes s
+            JOIN venues v ON s.id_venue = v.id
+            JOIN toques t ON s.id_toque = t.id
+            WHERE s.id_artista = %s AND s.estado = 'aceptado'
+            ORDER BY t.fecha, t.hora_inicio
+        """, (artist_id,))
+        bookings = cur.fetchall()
+        return render_template("manage.html", user_type=user_type, bookings=bookings)
+
+    else:  # venue
+        # Get venue id
+        cur.execute("SELECT id FROM venues WHERE id_usuario = %s", (user_id,))
+        venue_row = cur.fetchone()
+        venue_id = venue_row[0] if venue_row else None
+
+        # Get accepted bookings for venue
+        cur.execute("""
+            SELECT s.id, a.nombre_artista, a.descripcion_artista, t.fecha, t.hora_inicio, t.hora_fin, a.imagen_artista
+            FROM solicitudes s
+            JOIN artists a ON s.id_artista = a.id
+            JOIN toques t ON s.id_toque = t.id
+            WHERE s.id_venue = %s AND s.estado = 'aceptado'
+            ORDER BY t.fecha, t.hora_inicio
+        """, (venue_id,))
+        bookings = cur.fetchall()
+
+        # Get pending requests for venue
+        cur.execute("""
+            SELECT s.id, a.nombre_artista, a.descripcion_artista, t.fecha, t.hora_inicio, t.hora_fin, a.imagen_artista
+            FROM solicitudes s
+            JOIN artists a ON s.id_artista = a.id
+            JOIN toques t ON s.id_toque = t.id
+            WHERE s.id_venue = %s AND s.estado = 'pendiente'
+            ORDER BY t.fecha, t.hora_inicio
+        """, (venue_id,))
+        requests = cur.fetchall()
+
+        return render_template("manage.html", user_type=user_type, bookings=bookings, requests=requests)
