@@ -24,7 +24,7 @@
                     <div class="card flex-row align-items-center w-100" style="max-width: 700px;">
                         <div class="d-flex flex-column align-items-center py-3 px-3" style="min-width: 200px;">
                             <img src="{{ url_for('static', filename=venue[7]) }}" class="card-img-left mb-3" alt="{{ venue[7] }}" style="width: 180px; height: 180px; object-fit: cover;">
-                            <a href="/book" class="btn btn-primary" style="width: 180px;">Solicitar tocar</a>
+                            <a href="{{ url_for('book', venue_id=venue[0]) }}" class="btn btn-primary" style="width: 180px;">Solicitar tocar</a>
                         </div>
                         <div class="card-body">
                             <h5 class="card-title">{{ venue[1] }}</h5>

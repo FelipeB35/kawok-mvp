@@ -352,3 +352,56 @@ def discover():
 def profile():
     return render_template("profile.html", username=session.get("username"))
 
+
+
+@app.route("/book/<int:venue_id>", methods=["GET", "POST"])
+@login_required
+def book(venue_id):
+    if request.method == "POST":
+        user_id = session.get("user_id")
+        if not user_id:
+            return apology("You must be logged in to book a venue", 403)
+
+        # Get artist id from user_id
+        cur.execute("SELECT id FROM artists WHERE id_usuario = %s", (user_id,))
+        artist_row = cur.fetchone()
+        if not artist_row:
+            return apology("No artist profile found.", 400)
+        id_artista = artist_row[0]
+
+        # Get date and time from form
+        fecha_hora = request.form.get("fecha")  # e.g. "2025-07-01 18:00"
+        if not fecha_hora:
+            return apology("Debes seleccionar una fecha y hora", 400)
+
+        # Parse date and hour
+        from datetime import datetime, timedelta
+        dt = datetime.strptime(fecha_hora, "%Y-%m-%d %H:%M")
+        fecha = dt.date()
+        hora_inicio = dt.time()
+        hora_fin = (dt + timedelta(hours=1)).time()  # 1-hour block
+
+        # Insert into toques
+        cur.execute(
+            "INSERT INTO toques (fecha, hora_inicio, hora_fin) VALUES (%s, %s, %s) RETURNING id",
+            (fecha, hora_inicio, hora_fin)
+        )
+        id_toque = cur.fetchone()[0]
+
+        # Insert into solicitudes
+        cur.execute(
+            "INSERT INTO solicitudes (id_artista, id_venue, id_toque, estado, timestamp) VALUES (%s, %s, %s, %s, NOW())",
+            (id_artista, venue_id, id_toque, "pendiente")
+        )
+        conn.commit()
+        flash("Solicitud enviada exitosamente.")
+        return redirect("/home")
+
+    # Query the venue info from the database using venue_id
+    cur.execute("SELECT nombre_venue, descripcion_venue, imagen_venue FROM venues WHERE id = %s", (venue_id,))
+    venue = cur.fetchone()
+    if not venue:
+        return apology("Venue not found", 404)
+    venue_name, venue_description, venue_image = venue
+    return render_template("book.html", venue_name=venue_name, venue_description=venue_description, venue_image=venue_image)
+
