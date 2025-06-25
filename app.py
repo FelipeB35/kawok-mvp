@@ -316,14 +316,50 @@ def register3():
 @app.route("/home")
 @login_required
 def home():
+    user_id = session.get("user_id")
+    if not user_id:
+        return redirect("/login")
     user_type = session.get("register_user_type", "artista")
     if user_type == "artista":
         cur.execute("SELECT nombre_venue, imagen_venue FROM venues")
         cards = cur.fetchall()
+
+        cur.execute("SELECT id FROM artists WHERE id_usuario = %s", (user_id,))
+        artist_row = cur.fetchone()
+        artist_id = artist_row[0] if artist_row else None
+
+        # Get accepted bookings for artist
+        cur.execute("""
+            SELECT s.id, v.nombre_venue, v.direccion, t.fecha, t.hora_inicio, t.hora_fin, v.imagen_venue, u.telefono
+            FROM solicitudes s
+            JOIN venues v ON s.id_venue = v.id
+            JOIN usuarios u ON v.id_usuario = u.id
+            JOIN toques t ON s.id_toque = t.id
+            WHERE s.id_artista = %s AND s.estado = 'aceptado'
+            ORDER BY t.fecha, t.hora_inicio
+        """, (artist_id,))
+        bookings = cur.fetchall()
     else:
         cur.execute("SELECT nombre_artista, imagen_artista FROM artists")
         cards = cur.fetchall()
-    return render_template("home.html", user_type=user_type, cards=cards)
+        
+        cur.execute("SELECT id FROM venues WHERE id_usuario = %s", (user_id,))
+        venue_row = cur.fetchone()
+        venue_id = venue_row[0] if venue_row else None
+
+        # Get accepted bookings for venue
+        cur.execute("""
+            SELECT s.id, a.nombre_artista, a.descripcion_artista, t.fecha, t.hora_inicio, t.hora_fin, a.imagen_artista, u.telefono
+            FROM solicitudes s
+            JOIN artists a ON s.id_artista = a.id
+            JOIN usuarios u ON a.id_usuario = u.id
+            JOIN toques t ON s.id_toque = t.id
+            WHERE s.id_venue = %s AND s.estado = 'aceptado'
+            ORDER BY t.fecha, t.hora_inicio
+        """, (venue_id,))
+        bookings = cur.fetchall()
+
+    return render_template("home.html", user_type=user_type, cards=cards, bookings=bookings)
 
 @app.route("/discover")
 @login_required
@@ -428,15 +464,18 @@ def manage():
 
         # Get accepted bookings for artist
         cur.execute("""
-            SELECT s.id, v.nombre_venue, v.direccion, t.fecha, t.hora_inicio, t.hora_fin, v.imagen_venue
+            SELECT s.id, v.nombre_venue, v.direccion, t.fecha, t.hora_inicio, t.hora_fin, v.imagen_venue, u.telefono
             FROM solicitudes s
             JOIN venues v ON s.id_venue = v.id
+            JOIN usuarios u ON v.id_usuario = u.id
             JOIN toques t ON s.id_toque = t.id
             WHERE s.id_artista = %s AND s.estado = 'aceptado'
             ORDER BY t.fecha, t.hora_inicio
         """, (artist_id,))
         bookings = cur.fetchall()
-        return render_template("manage.html", user_type=user_type, bookings=bookings)
+        cur.execute("SELECT telefono FROM usuarios a JOIN artists b ON a.id = b.id_usuario JOIN venues c ON a.id = c.id_usuario WHERE a.id = %s", (user_id,))
+        telefono = cur.fetchall()
+        return render_template("manage.html", user_type=user_type, bookings=bookings, telefono=telefono)
 
     else:  # venue
         # Get venue id
@@ -446,9 +485,10 @@ def manage():
 
         # Get accepted bookings for venue
         cur.execute("""
-            SELECT s.id, a.nombre_artista, a.descripcion_artista, t.fecha, t.hora_inicio, t.hora_fin, a.imagen_artista
+            SELECT s.id, a.nombre_artista, a.descripcion_artista, t.fecha, t.hora_inicio, t.hora_fin, a.imagen_artista, u.telefono
             FROM solicitudes s
             JOIN artists a ON s.id_artista = a.id
+            JOIN usuarios u ON a.id_usuario = u.id
             JOIN toques t ON s.id_toque = t.id
             WHERE s.id_venue = %s AND s.estado = 'aceptado'
             ORDER BY t.fecha, t.hora_inicio
@@ -465,5 +505,7 @@ def manage():
             ORDER BY t.fecha, t.hora_inicio
         """, (venue_id,))
         requests = cur.fetchall()
+        cur.execute("SELECT telefono FROM usuarios a JOIN artists b ON a.id = b.id_usuario JOIN venues c ON a.id = c.id_usuario WHERE a.id = %s", (user_id,))
+        telefono = cur.fetchall()
+        return render_template("manage.html", user_type=user_type, bookings=bookings, requests=requests, telefono=telefono)
 
-        return render_template("manage.html", user_type=user_type, bookings=bookings, requests=requests)

@@ -17,11 +17,11 @@
                         <h5 class="mb-1">{{ booking[1] }}</h5>
                         <div class="text-muted small">{{ booking[2] }}</div>
                         <div>Fecha: {{ booking[3] }}</div>
-                        <div>Hora: {{ booking[4]|string|slice(0,5) }} - {{ booking[5]|string|slice(0,5) }}</div>
+                        <div>Hora: {{ booking[4].strftime('%I:%M %p') }} - {{ booking[5].strftime('%I:%M %p') }}</div>
                     </div>
                 </div>
                 <div class="card-footer bg-transparent border-0">
-                    <a href="#" class="btn btn-success w-100">Contactar</a>
+                    <a href="https://wa.me/503{{ booking[7] }}" class="btn btn-success w-100">Contactar</a>
                 </div>
             </div>
         {% else %}
@@ -37,11 +37,11 @@
                         <h5 class="mb-1">{{ booking[1] }}</h5>
                         <div class="text-muted small">{{ booking[2] }}</div>
                         <div>Fecha: {{ booking[3] }}</div>
-                        <div>Hora: {{ booking[4]|string|slice(0,5) }} - {{ booking[5]|string|slice(0,5) }}</div>
+                        <div>Hora: {{ booking[4].strftime('%I:%M %p') }} - {{ booking[5].strftime('%I:%M %p') }}</div>
                     </div>
                 </div>
                 <div class="card-footer bg-transparent border-0">
-                    <a href="#" class="btn btn-success w-100">Contactar</a>
+                    <a href="https://wa.me/503{{ booking[7] }}" class="btn btn-success w-100">Contactar</a>
                 </div>
             </div>
         {% else %}
@@ -57,7 +57,7 @@
                         <h5 class="mb-1">{{ req[1] }}</h5>
                         <div class="text-muted small">{{ req[2] }}</div>
                         <div>Fecha: {{ req[3] }}</div>
-                        <div>Hora: {{ req[4]|string|slice(0,5) }} - {{ req[5]|string|slice(0,5) }}</div>
+                        <div>Hora: {{ req[4].strftime('%I:%M %p') }} - {{ req[5].strftime('%I:%M %p') }}</div>
                     </div>
                 </div>
                 <div class="card-footer bg-transparent border-0 d-flex gap-2">
