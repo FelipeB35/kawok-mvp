@@ -1,0 +1,62 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Bienvenido al movimiento Kawok
+{% endblock %}
+
+{% block content %}
+    <div class="container mt-5">
+        <h1 class="text-center mb-4">
+            Déscubre {% if user_type == 'artista' %} nuevos venues {% elif user_type == 'venue' %} nuevos artistas {% endif %}
+        </h1>
+        <form class="d-flex justify-content-center mb-4" role="search" style="width: 100%;">
+            <div class="input-group" style="max-width: 400px; width: 90%;">
+                <input name="q" type="text" id="searchInput" class="form-control" placeholder="Buscar por nombre" aria-label="Buscar">
+                <button class="btn btn-outline-secondary" type="submit">
+                    <i class="fa fa-search"></i>
+                </button>
+            </div>
+        </form>
+        <div class="row justify-content-center">
+            {% if user_type == 'artista' %}
+                {% for venue in cards %}
+                <div class="col-12 col-md-8 mb-4 d-flex justify-content-center">
+                    <div class="card flex-row align-items-center w-100" style="max-width: 700px;">
+                        <div class="d-flex flex-column align-items-center py-3 px-3" style="min-width: 200px;">
+                            <img src="{{ url_for('static', filename=venue[7]) }}" class="card-img-left mb-3" alt="{{ venue[7] }}" style="width: 180px; height: 180px; object-fit: cover;">
+                            <a href="{{ url_for('book', venue_id=venue[0]) }}" class="btn btn-primary" style="width: 180px;">Solicitar tocar</a>
+                        </div>
+                        <div class="card-body">
+                            <h5 class="card-title">{{ venue[1] }}</h5>
+                            <p class="card-text">{{ venue[6] }}</p>
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item px-0">Dirección: {{ venue[3] }}</li>
+                                <li class="list-group-item px-0">Pago máximo: ${{ venue[4] }}</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% elif user_type == 'venue' %}
+                {% for artista in cards %}
+                <div class="col-12 col-md-8 mb-4 d-flex justify-content-center">
+                    <div class="card flex-row align-items-center w-100" style="max-width: 700px;">
+                        <div class="d-flex flex-column align-items-center py-3 px-3" style="min-width: 200px;">
+                            <img src="{{ url_for('static', filename=artista[6]) }}" class="card-img-left mb-3" alt="{{ artista[6] }}" style="width: 180px; height: 180px; object-fit: cover;">
+                            <a href="https://wa.me/503{{ telefono[loop.index0][0] }}" class="btn btn-primary" style="width: 180px;">Contactar artista</a>
+                        </div>
+                        <div class="card-body">
+                            <h5 class="card-title">{{ artista[1] }}</h5>
+                            <p class="card-text">{{ artista[5] }}</p>
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item px-0">Género: {{ artista[9] }}</li>
+                                <li class="list-group-item px-0">Fee máximo: ${{ artista[4] }}</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

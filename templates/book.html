@@ -1,0 +1,37 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Enviar Solicitud
+{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 400px;">
+    <h2 class="text-center mb-4">Enviar Solicitud</h2>
+    <div class="d-flex align-items-center mb-3">
+        <img src="{{ url_for('static', filename=venue_image) }}" alt="Imagen del venue" class="rounded me-3" style="width: 80px; height: 80px; object-fit: cover;">
+        <div>
+            <h5 class="mb-1">{{ venue_name }}</h5>
+            <p class="mb-0 small text-muted">{{ venue_description }}</p>
+        </div>
+    </div>
+    <form method="post" autocomplete="off">
+        <div class="mb-3">
+            <label for="fecha" class="form-label">Selecciona fecha y hora</label>
+            <input id="fecha" name="fecha" class="form-control" placeholder="Elige fecha y hora" required>
+        </div>
+        <button type="submit" class="btn btn-success w-100">Enviar solicitud</button>
+    </form>
+</div>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+    flatpickr("#fecha", {
+        enableTime: true,
+        dateFormat: "Y-m-d H:i",
+        minDate: "today",
+        time_24hr: true,
+        minuteIncrement: 60 // 1-hour blocks
+    });
+</script>
+{% endblock %}

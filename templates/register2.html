@@ -1,0 +1,51 @@
+{% extends "layout.html" %}
+{% block title %}Registro - Paso 2{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-sm p-4">
+            <h2 class="mb-2">Sé parte del movimiento Kawok</h2>
+            <h5 class="mb-4 text-secondary">Regístrate - 2/3</h5>
+            <form method="POST" autocomplete="off">
+                <div class="mb-3">
+                    <input value="{{ datos_usuario.get('telefono', '') }}" type="tel" name="telefono" class="form-control" placeholder="Número de teléfono" required>
+                </div>
+                <div class="mb-3">
+                    <select name="ciudad" class="form-select" required>
+                        <option value="" disabled selected>Ciudad de Residencia</option>
+                        {% for c in ciudades %}
+                        <option value="{{ c[0] }}" {% if c[0] == datos_usuario.get('ciudad') %}selected{% endif %}>{{ c[1] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% if user_type == "artista" %}
+                    <div class="mb-3">
+                        <input value="{{ datos_usuario.get('dui', '') }}" type="text" name="dui" class="form-control" placeholder="Ingresa tu DUI" required>
+                    </div>
+                    <div class="mb-3">
+                        <input value="{{ datos_usuario.get('nombre_artista', '') }}" type="text" name="nombre_artista" class="form-control" placeholder="Nombre Artístico" required>
+                    </div>
+                    <div class="mb-3">
+                        <select name="genero" class="form-select" required>
+                            <option value="" disabled selected>Género Musical</option>
+                            {% for g in generos %}
+                            <option value="{{ g[0] }}" {% if g[0] == datos_usuario.get('genero') %}selected{% endif %}>{{ g[1] }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                {% elif user_type == "venue" %}
+                    <div class="mb-3">
+                        <input value="{{ datos_usuario.get('nit', '') }}" type="text" name="nit" class="form-control" placeholder="NIT del Venue" required>
+                    </div>
+                    <div class="mb-3">
+                        <input value="{{ datos_usuario.get('nombre_venue', '') }}" type="text" name="nombre_venue" class="form-control" placeholder="Nombre del Venue" required>
+                    </div>
+                    <div class="mb-3">
+                        <input value="{{ datos_usuario.get('direccion', '') }}" type="text" name="direccion" class="form-control" placeholder="Dirección del venue" required>
+                    </div>
+                {% endif %}
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{{ url_for('register') }}" class="btn btn-secondary">Atrás</a>
+                    <button type="submit" class="btn btn-success">Siguiente</button>
+                </div>
+{% endblock %}
