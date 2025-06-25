@@ -6,7 +6,8 @@ from helpers import apology, login_required, lookup, usd
 import uuid
 from werkzeug.utils import secure_filename
 import os
-
+from dotenv import load_dotenv
+load_dotenv()
 
 # Configure application
 app = Flask(__name__)
@@ -22,14 +23,7 @@ if __name__ == "__main__":
     app.run(debug=True)
 
 # Database connection
-conn = psycopg2.connect(
-    dbname="kawok",
-    user="postgres",
-    password="12345",
-    host="127.0.0.1",
-    port="5432"
-)
-
+conn = psycopg2.connect(os.environ.get('SUPABASE_URL'))
 # Create a cursor to execute SQL commands
 cur = conn.cursor()
 
