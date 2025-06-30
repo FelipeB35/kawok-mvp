@@ -57,52 +57,30 @@ def index():
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    """Log user in"""
-
-    # Forget any user_id
     session.clear()
-
-    # User reached route via POST (as by submitting a form via POST)
     if request.method == "POST":
-        # Ensure username was submitted
         user = request.form.get("username")
         password = request.form.get("password")
         if not user:
             return apology("Debes proveer un usuario", 400)
-
-        # Ensure password was submitted
         if not password:
             return apology("Debes proveer una contraseña", 400)
 
-        # Query database for username
-        cur.execute(
-            "SELECT * FROM usuarios WHERE usuario = %s", (user,)
-        )
-        rows = cur.fetchall()
+        result = supabase.table("usuarios").select("*").eq("usuario", user).execute()
+        rows = result.data
 
-        
-
-        # Ensure user and password is correct
-        if len(rows) != 1 or not check_password_hash(
-            rows[0][3], password
-        ):
+        if len(rows) != 1 or not check_password_hash(rows[0]["contraseña"], password):
             return apology("Contraseña o usuario inválidos.", 400)
 
+        session["user_id"] = rows[0]["id"]
+        session["username"] = rows[0]["usuario"]
 
-        # Remember which user has logged in
-        session["user_id"] = rows[0][0]
-        session["username"] = rows[0][2]
-        
-        cur.execute("SELECT 1 FROM artists WHERE id_usuario = %s", (session["user_id"],))
-        if cur.fetchone():
+        artist_check = supabase.table("artists").select("id").eq("id_usuario", session["user_id"]).execute()
+        if artist_check.data:
             session["register_user_type"] = "artista"
         else:
             session["register_user_type"] = "venue"
-
-        # Redirect user to home page
         return redirect("/home")
-
-    # User reached route via GET (as by clicking a link or via redirect)
     else:
         return render_template("login.html")
 
@@ -125,48 +103,37 @@ def clear_session():
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
-    # In your /register route (after POST)
     session["register_user_type"] = request.form.get("user_type")
     user_type = session.get("register_user_type", "artista")
-
     if request.method == "POST":
-        print("POST data:", request.form)
         if user_type not in ["artista", "venue"]:
             return apology("Debes seleccionar un tipo de usuario", 400)
-
         if not request.form.get("nombre"):
             return apology("Debes proporcionar un nombre", 400)
-
         if not request.form.get("usuario"):
             return apology("Debes proporcionar un nombre de usuario", 400)
-
         if not request.form.get("correo"):
             return apology("Debes proporcionar un correo electrónico", 400)
-
         if not request.form.get("contraseña"):
             return apology("Debes proporcionar una contraseña", 400)
-
         if not request.form.get("confirmar"):
             return apology("Debes proporcionar una confirmación de contraseña", 400)
-        # Check if username or email already exists
-        cur.execute("SELECT * FROM usuarios WHERE usuario = %s OR correo = %s",
-                    (request.form.get("usuario"), request.form.get("correo")))
-        if cur.fetchone():
-            return apology("El nombre de usuario o el correo electrónico ya existen", 400)
 
-        # Validate passwords
+        exists = supabase.table("usuarios").select("*").or_(
+            f"usuario.eq.{request.form.get('usuario')},correo.eq.{request.form.get('correo')}"
+        ).execute()
+        if exists.data:
+            return apology("El nombre de usuario o el correo electrónico ya existen", 400)
         if request.form.get("contraseña") != request.form.get("confirmar"):
             return apology("Las contraseñas deben coincidir", 400)
-        # Insert new user into the database
         session["register_step1"] = {
-        "user_type": request.form.get("user_type"),
-        "nombre": request.form.get("nombre"),
-        "usuario": request.form.get("usuario"),
-        "correo": request.form.get("correo"),
-        "contraseña": request.form.get("contraseña"),
-        "confirmar": request.form.get("confirmar"),
-    }
-
+            "user_type": request.form.get("user_type"),
+            "nombre": request.form.get("nombre"),
+            "usuario": request.form.get("usuario"),
+            "correo": request.form.get("correo"),
+            "contraseña": request.form.get("contraseña"),
+            "confirmar": request.form.get("confirmar"),
+        }
         return redirect("/register2")
     datos = session.get("register_step1", {})
     return render_template("register.html", datos=datos, user_type=user_type)
@@ -174,21 +141,13 @@ def register():
 @app.route("/register2", methods=["GET", "POST"])
 def register2():
     user_type = session.get("register_user_type", "artista")
-    cur.execute("SELECT * FROM ciudades")
-    ciudades = cur.fetchall()
-
-    cur.execute("SELECT * FROM generos")
-    generos = cur.fetchall()
-
+    ciudades = supabase.table("ciudades").select("*").execute().data
+    generos = supabase.table("generos").select("*").execute().data
     if request.method == "POST":
-        print("POST data:", request.form)
-        print("user_type:", user_type)
-        # Validate required fields
         if not request.form.get("telefono"):
             return apology("Debes proporcionar un número de teléfono", 400)
         if not request.form.get("ciudad"):
             return apology("Debes seleccionar una ciudad", 400)
-        
         if user_type == "artista":
             if not request.form.get("dui"):
                 return apology("Debes proporcionar un número de DUI", 400)
@@ -196,15 +155,13 @@ def register2():
                 return apology("Debes proporcionar un nombre artístico", 400)
             if not request.form.get("genero"):
                 return apology("Debes seleccionar un género", 400)
-            
-        else:  # user_type == "venue"
+        else:
             if not request.form.get("nit"):
                 return apology("Debes proporcionar un NIT", 400)
             if not request.form.get("nombre_venue"):
                 return apology("Debes proporcionar un nombre de venue", 400)
             if not request.form.get("direccion"):
                 return apology("Debes proporcionar una dirección del venue", 400)
-
         if user_type == "artista":
             session["register_step2"] = {
                 "telefono": request.form.get("telefono"),
@@ -221,27 +178,20 @@ def register2():
                 "nombre_venue": request.form.get("nombre_venue"),
                 "direccion": request.form.get("direccion"),
             }
-        
-        
         return redirect("/register3")
     datos_usuario = session.get("register_step2", {})
     return render_template("register2.html", datos_usuario=datos_usuario, user_type=user_type, ciudades=ciudades, generos=generos)
 
 @app.route("/register3", methods=["GET", "POST"])
 def register3():
-    print("register_step1:", session.get("register_step1"))
-    print("register_user_type:", session.get("register_user_type"))
     user_type = session.get("register_user_type", "artista")
     if request.method == "POST":
-        # Validiate required fields
         if not request.form.get("fee_range"):
             return apology("Debes proporcionar un rango de fee", 400)
         if not request.form.get("descripcion"):
             return apology("Debes proporcionar una descripción", 400)
         if "image_upload" not in request.files or request.files["image_upload"].filename == "":
             return apology("Debes proporcionar una foto", 400)
-        
-        # Save the uploaded image
         image = request.files["image_upload"]
         if image and image.filename != "":
             ext = os.path.splitext(secure_filename(image.filename))[1]
@@ -251,68 +201,51 @@ def register3():
             else:
                 storage_path = f"venues/{unique_name}"
             public_url = upload_to_supabase_storage(image, storage_path)
-            image_db_path = public_url  # Así guardas la URL accesible
+            image_db_path = public_url
         else:
             image_db_path = None
-
         if user_type == "artista":
             session["register_step3"] = {
                 "fee_range": request.form.get("fee_range"),
                 "descripcion": request.form.get("descripcion"),
                 "image_upload": image_db_path,
             }
-        else:  # user_type == "venue"
+        else:
             session["register_step3"] = {
                 "fee_range": request.form.get("fee_range"),
                 "descripcion": request.form.get("descripcion"),
                 "image_upload": image_db_path,
             }
-
-        # Insert user into the database y obtener el id generado
-        cur.execute(
-            "INSERT INTO USUARIOS (nombre, usuario, contraseña, correo, telefono, id_ciudad) VALUES (%s, %s, %s, %s, %s, %s) RETURNING id",
-            (
-                session["register_step1"]["nombre"],
-                session["register_step1"]["usuario"],
-                generate_password_hash(session["register_step1"]["contraseña"]),
-                session["register_step1"]["correo"],
-                session["register_step2"]["telefono"],
-                session["register_step2"]["ciudad"]
-            )
-        )
-        user_id = cur.fetchone()[0] 
-
-        user_type = session.get("register_user_type", "artista")
-
+        # Insert user into usuarios
+        user_insert = supabase.table("usuarios").insert({
+            "nombre": session["register_step1"]["nombre"],
+            "usuario": session["register_step1"]["usuario"],
+            "contraseña": generate_password_hash(session["register_step1"]["contraseña"]),
+            "correo": session["register_step1"]["correo"],
+            "telefono": session["register_step2"]["telefono"],
+            "id_ciudad": session["register_step2"]["ciudad"]
+        }).execute()
+        user_id = user_insert.data[0]["id"]
         if user_type == "artista":
-            cur.execute(
-                "INSERT INTO artists (nombre_artista, id_usuario, id_genero, fee_max, descripcion_artista, imagen_artista, dui)"
-                " VALUES (%s, %s, %s, %s, %s, %s, %s)",
-                (
-                    session["register_step2"]["nombre_artista"],
-                    user_id, 
-                    session["register_step2"]["genero"],
-                    session["register_step3"]["fee_range"],
-                    session["register_step3"]["descripcion"],
-                    session["register_step3"]["image_upload"],
-                    session["register_step2"]["dui"]
-                )
-            )
-        else:  # user_type == "venue"
-            cur.execute(
-                "INSERT INTO venues (nombre_venue, nit, direccion, pago_max, id_usuario, descripcion_venue, imagen_venue)"
-                " VALUES (%s, %s, %s, %s, %s, %s, %s)",
-                (
-                    session["register_step2"]["nombre_venue"],
-                    session["register_step2"]["nit"],
-                    session["register_step2"]["direccion"],
-                    session["register_step3"]["fee_range"],
-                    user_id,
-                    session["register_step3"]["descripcion"],
-                    session["register_step3"]["image_upload"]
-                )
-            )
-        conn.commit()
+            supabase.table("artists").insert({
+                "nombre_artista": session["register_step2"]["nombre_artista"],
+                "id_usuario": user_id,
+                "id_genero": session["register_step2"]["genero"],
+                "fee_max": session["register_step3"]["fee_range"],
+                "descripcion_artista": session["register_step3"]["descripcion"],
+                "imagen_artista": session["register_step3"]["image_upload"],
+                "dui": session["register_step2"]["dui"]
+            }).execute()
+        else:
+            supabase.table("venues").insert({
+                "nombre_venue": session["register_step2"]["nombre_venue"],
+                "nit": session["register_step2"]["nit"],
+                "direccion": session["register_step2"]["direccion"],
+                "pago_max": session["register_step3"]["fee_range"],
+                "id_usuario": user_id,
+                "descripcion_venue": session["register_step3"]["descripcion"],
+                "imagen_venue": session["register_step3"]["image_upload"]
+            }).execute()
         # Clear the session data after successful registration
         session.pop("register_step1", None)
         session.pop("register_step2", None)
@@ -320,7 +253,6 @@ def register3():
         return redirect("/login")
     datos_usuario = session.get("register_step3", {})
     return render_template("register3.html", user_type=user_type, datos_usuario=datos_usuario)
-
 
 @app.route("/home")
 @login_required
@@ -330,44 +262,21 @@ def home():
         return redirect("/login")
     user_type = session.get("register_user_type", "artista")
     if user_type == "artista":
-        cur.execute("SELECT nombre_venue, imagen_venue FROM venues")
-        cards = cur.fetchall()
-
-        cur.execute("SELECT id FROM artists WHERE id_usuario = %s", (user_id,))
-        artist_row = cur.fetchone()
-        artist_id = artist_row[0] if artist_row else None
-
-        # Get accepted bookings for artist
-        cur.execute("""
-            SELECT s.id, v.nombre_venue, v.direccion, t.fecha, t.hora_inicio, t.hora_fin, v.imagen_venue, u.telefono
-            FROM solicitudes s
-            JOIN venues v ON s.id_venue = v.id
-            JOIN usuarios u ON v.id_usuario = u.id
-            JOIN toques t ON s.id_toque = t.id
-            WHERE s.id_artista = %s AND s.estado = 'aceptado'
-            ORDER BY t.fecha, t.hora_inicio
-        """, (artist_id,))
-        bookings = cur.fetchall()
+        cards = supabase.table("venues").select("nombre_venue, imagen_venue").execute().data
+        artist_row = supabase.table("artists").select("id").eq("id_usuario", user_id).execute().data
+        artist_id = artist_row[0]["id"] if artist_row else None
+        bookings = supabase.table("solicitudes") \
+            .select("id, venues(nombre_venue, direccion, imagen_venue, usuarios(telefono)), toques(fecha, hora_inicio, hora_fin)") \
+            .eq("id_artista", artist_id).eq("estado", "aceptado") \
+            .order("toques.fecha").order("toques.hora_inicio").execute().data
     else:
-        cur.execute("SELECT nombre_artista, imagen_artista FROM artists")
-        cards = cur.fetchall()
-        
-        cur.execute("SELECT id FROM venues WHERE id_usuario = %s", (user_id,))
-        venue_row = cur.fetchone()
-        venue_id = venue_row[0] if venue_row else None
-
-        # Get accepted bookings for venue
-        cur.execute("""
-            SELECT s.id, a.nombre_artista, a.descripcion_artista, t.fecha, t.hora_inicio, t.hora_fin, a.imagen_artista, u.telefono
-            FROM solicitudes s
-            JOIN artists a ON s.id_artista = a.id
-            JOIN usuarios u ON a.id_usuario = u.id
-            JOIN toques t ON s.id_toque = t.id
-            WHERE s.id_venue = %s AND s.estado = 'aceptado'
-            ORDER BY t.fecha, t.hora_inicio
-        """, (venue_id,))
-        bookings = cur.fetchall()
-
+        cards = supabase.table("artists").select("nombre_artista, imagen_artista").execute().data
+        venue_row = supabase.table("venues").select("id").eq("id_usuario", user_id).execute().data
+        venue_id = venue_row[0]["id"] if venue_row else None
+        bookings = supabase.table("solicitudes") \
+            .select("id, artists(nombre_artista, descripcion_artista, imagen_artista, usuarios(telefono)), toques(fecha, hora_inicio, hora_fin)") \
+            .eq("id_venue", venue_id).eq("estado", "aceptado") \
+            .order("toques.fecha").order("toques.hora_inicio").execute().data
     return render_template("home.html", user_type=user_type, cards=cards, bookings=bookings)
 
 @app.route("/discover")
@@ -377,27 +286,15 @@ def discover():
     search = request.args.get("q", "").strip()
     if user_type == "artista":
         if search:
-            cur.execute("SELECT * FROM venues WHERE LOWER(nombre_venue) LIKE %s", (f"%{search.lower()}%",))
+            cards = supabase.table("venues").select("*").ilike("nombre_venue", f"%{search}%").execute().data
         else:
-            cur.execute("SELECT * FROM venues")
-        cards = cur.fetchall()
+            cards = supabase.table("venues").select("*").execute().data
     else:
         if search:
-            cur.execute("SELECT * FROM artists a JOIN generos b ON a.id_genero = b.id WHERE LOWER(a.nombre_artista) LIKE %s", (f"%{search.lower()}%",))
+            cards = supabase.table("artists").select("*").ilike("nombre_artista", f"%{search}%").execute().data
         else:
-            cur.execute("SELECT * FROM artists a JOIN generos b ON a.id_genero = b.id")
-        cards = cur.fetchall()
-
-    cur.execute("SELECT telefono FROM usuarios a JOIN artists b ON a.id = b.id_usuario")
-    telefono = cur.fetchall()
-    return render_template("discover.html", user_type=user_type, cards=cards, telefono=telefono)
-
-@app.route("/profile")
-@login_required
-def profile():
-    return render_template("profile.html", username=session.get("username"))
-
-
+            cards = supabase.table("artists").select("*").execute().data
+    return render_template("discover.html", user_type=user_type, cards=cards)
 
 @app.route("/book/<int:venue_id>", methods=["GET", "POST"])
 @login_required
@@ -406,48 +303,38 @@ def book(venue_id):
         user_id = session.get("user_id")
         if not user_id:
             return apology("You must be logged in to book a venue", 403)
-
-        # Get artist id from user_id
-        cur.execute("SELECT id FROM artists WHERE id_usuario = %s", (user_id,))
-        artist_row = cur.fetchone()
+        artist_row = supabase.table("artists").select("id").eq("id_usuario", user_id).execute().data
         if not artist_row:
             return apology("No artist profile found.", 400)
-        id_artista = artist_row[0]
-
-        # Get date and time from form
-        fecha_hora = request.form.get("fecha")  # e.g. "2025-07-01 18:00"
+        id_artista = artist_row[0]["id"]
+        fecha_hora = request.form.get("fecha")
         if not fecha_hora:
             return apology("Debes seleccionar una fecha y hora", 400)
-
-        # Parse date and hour
         from datetime import datetime, timedelta
         dt = datetime.strptime(fecha_hora, "%Y-%m-%d %H:%M")
-        fecha = dt.date()
-        hora_inicio = dt.time()
-        hora_fin = (dt + timedelta(hours=1)).time()  # 1-hour block
-
-        # Insert into toques
-        cur.execute(
-            "INSERT INTO toques (fecha, hora_inicio, hora_fin) VALUES (%s, %s, %s) RETURNING id",
-            (fecha, hora_inicio, hora_fin)
-        )
-        id_toque = cur.fetchone()[0]
-
-        # Insert into solicitudes
-        cur.execute(
-            "INSERT INTO solicitudes (id_artista, id_venue, id_toque, estado, timestamp) VALUES (%s, %s, %s, %s, NOW())",
-            (id_artista, venue_id, id_toque, "pendiente")
-        )
-        conn.commit()
+        fecha = dt.date().isoformat()
+        hora_inicio = dt.time().strftime("%H:%M:%S")
+        hora_fin = (dt + timedelta(hours=1)).time().strftime("%H:%M:%S")
+        toques_insert = supabase.table("toques").insert({
+            "fecha": fecha,
+            "hora_inicio": hora_inicio,
+            "hora_fin": hora_fin
+        }).execute()
+        id_toque = toques_insert.data[0]["id"]
+        supabase.table("solicitudes").insert({
+            "id_artista": id_artista,
+            "id_venue": venue_id,
+            "id_toque": id_toque,
+            "estado": "pendiente"
+        }).execute()
         flash("Solicitud enviada exitosamente.")
         return redirect("/home")
-
-    # Query the venue info from the database using venue_id
-    cur.execute("SELECT nombre_venue, descripcion_venue, imagen_venue FROM venues WHERE id = %s", (venue_id,))
-    venue = cur.fetchone()
+    venue = supabase.table("venues").select("nombre_venue, descripcion_venue, imagen_venue").eq("id", venue_id).execute().data
     if not venue:
         return apology("Venue not found", 404)
-    venue_name, venue_description, venue_image = venue
+    venue_name = venue[0]["nombre_venue"]
+    venue_description = venue[0]["descripcion_venue"]
+    venue_image = venue[0]["imagen_venue"]
     return render_template("book.html", venue_name=venue_name, venue_description=venue_description, venue_image=venue_image)
 
 @app.route("/manage", methods=["GET", "POST"])
@@ -455,66 +342,30 @@ def book(venue_id):
 def manage():
     user_id = session.get("user_id")
     user_type = session.get("register_user_type")
-
-    # Handle accept/reject actions for venues
     if request.method == "POST" and user_type == "venue":
         solicitud_id = request.form.get("solicitud_id")
         action = request.form.get("action")
         if solicitud_id and action in ["aceptar", "rechazar"]:
             new_status = "aceptado" if action == "aceptar" else "rechazado"
-            cur.execute("UPDATE solicitudes SET estado = %s WHERE id = %s", (new_status, solicitud_id))
-            conn.commit()
-
+            supabase.table("solicitudes").update({"estado": new_status}).eq("id", solicitud_id).execute()
     if user_type == "artista":
-        # Get artist id
-        cur.execute("SELECT id FROM artists WHERE id_usuario = %s", (user_id,))
-        artist_row = cur.fetchone()
-        artist_id = artist_row[0] if artist_row else None
-
-        # Get accepted bookings for artist
-        cur.execute("""
-            SELECT s.id, v.nombre_venue, v.direccion, t.fecha, t.hora_inicio, t.hora_fin, v.imagen_venue, u.telefono
-            FROM solicitudes s
-            JOIN venues v ON s.id_venue = v.id
-            JOIN usuarios u ON v.id_usuario = u.id
-            JOIN toques t ON s.id_toque = t.id
-            WHERE s.id_artista = %s AND s.estado = 'aceptado'
-            ORDER BY t.fecha, t.hora_inicio
-        """, (artist_id,))
-        bookings = cur.fetchall()
-        cur.execute("SELECT telefono FROM usuarios a JOIN artists b ON a.id = b.id_usuario JOIN venues c ON a.id = c.id_usuario WHERE a.id = %s", (user_id,))
-        telefono = cur.fetchall()
-        return render_template("manage.html", user_type=user_type, bookings=bookings, telefono=telefono)
-
-    else:  # venue
-        # Get venue id
-        cur.execute("SELECT id FROM venues WHERE id_usuario = %s", (user_id,))
-        venue_row = cur.fetchone()
-        venue_id = venue_row[0] if venue_row else None
-
-        # Get accepted bookings for venue
-        cur.execute("""
-            SELECT s.id, a.nombre_artista, a.descripcion_artista, t.fecha, t.hora_inicio, t.hora_fin, a.imagen_artista, u.telefono
-            FROM solicitudes s
-            JOIN artists a ON s.id_artista = a.id
-            JOIN usuarios u ON a.id_usuario = u.id
-            JOIN toques t ON s.id_toque = t.id
-            WHERE s.id_venue = %s AND s.estado = 'aceptado'
-            ORDER BY t.fecha, t.hora_inicio
-        """, (venue_id,))
-        bookings = cur.fetchall()
-
-        # Get pending requests for venue
-        cur.execute("""
-            SELECT s.id, a.nombre_artista, a.descripcion_artista, t.fecha, t.hora_inicio, t.hora_fin, a.imagen_artista
-            FROM solicitudes s
-            JOIN artists a ON s.id_artista = a.id
-            JOIN toques t ON s.id_toque = t.id
-            WHERE s.id_venue = %s AND s.estado = 'pendiente'
-            ORDER BY t.fecha, t.hora_inicio
-        """, (venue_id,))
-        requests = cur.fetchall()
-        cur.execute("SELECT telefono FROM usuarios a JOIN artists b ON a.id = b.id_usuario JOIN venues c ON a.id = c.id_usuario WHERE a.id = %s", (user_id,))
-        telefono = cur.fetchall()
-        return render_template("manage.html", user_type=user_type, bookings=bookings, requests=requests, telefono=telefono)
+        artist_row = supabase.table("artists").select("id").eq("id_usuario", user_id).execute().data
+        artist_id = artist_row[0]["id"] if artist_row else None
+        bookings = supabase.table("solicitudes") \
+            .select("id, venues(nombre_venue, direccion, imagen_venue, usuarios(telefono)), toques(fecha, hora_inicio, hora_fin)") \
+            .eq("id_artista", artist_id).eq("estado", "aceptado") \
+            .order("toques.fecha").order("toques.hora_inicio").execute().data
+        return render_template("manage.html", user_type=user_type, bookings=bookings)
+    else:
+        venue_row = supabase.table("venues").select("id").eq("id_usuario", user_id).execute().data
+        venue_id = venue_row[0]["id"] if venue_row else None
+        bookings = supabase.table("solicitudes") \
+            .select("id, artists(nombre_artista, descripcion_artista, imagen_artista, usuarios(telefono)), toques(fecha, hora_inicio, hora_fin)") \
+            .eq("id_venue", venue_id).eq("estado", "aceptado") \
+            .order("toques.fecha").order("toques.hora_inicio").execute().data
+        requests = supabase.table("solicitudes") \
+            .select("id, artists(nombre_artista, descripcion_artista, imagen_artista, usuarios(telefono)), toques(fecha, hora_inicio, hora_fin)") \
+            .eq("id_venue", venue_id).eq("estado", "pendiente") \
+            .order("toques.fecha").order("toques.hora_inicio").execute().data
+        return render_template("manage.html", user_type=user_type, bookings=bookings, requests=requests)
 
