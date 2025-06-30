@@ -32,8 +32,7 @@ def upload_to_supabase_storage(file, storage_path):
 app = Flask(__name__)
 
 app.config["SESSION_PERMANENT"] = False
-app.config["SESSION_TYPE"] = "filesystem"
-Session(app)
+app.config["SESSION_TYPE"] = "null"
 
 UPLOAD_FOLDER = 'static/uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -42,9 +41,6 @@ if __name__ == "__main__":
     app.run(debug=True)
 
 
-# Database connection
-conn = psycopg2.connect(os.environ["DATABASE_URL"])
-cur = conn.cursor()
 
 
 @app.route("/")
