@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 supabase_url = os.environ.get("SUPABASE_URL")
-supabase_key = os.environ.get("SUPABASE_SERVICE_KEY")
+supabase_key = os.environ.get("SUPABASE_KEY")
 bucket_name = os.environ.get("SUPABASE_BUCKET")
 
 supabase: Client = create_client(supabase_url, supabase_key)
