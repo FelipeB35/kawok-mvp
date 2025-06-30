@@ -22,6 +22,7 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 if __name__ == "__main__":
     app.run(debug=True)
 
+
 # Database connection
 conn = psycopg2.connect(os.environ.get('SUPABASE_URL'))
 # Create a cursor to execute SQL commands
