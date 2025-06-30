@@ -6,8 +6,27 @@ from helpers import apology, login_required, lookup, usd
 import uuid
 from werkzeug.utils import secure_filename
 import os
+from supabase import create_client, Client
 from dotenv import load_dotenv
+
 load_dotenv()
+
+supabase_url = os.environ.get("SUPABASE_URL")
+supabase_key = os.environ.get("SUPABASE_SERVICE_KEY")
+bucket_name = os.environ.get("SUPABASE_BUCKET")
+
+supabase: Client = create_client(supabase_url, supabase_key)
+
+def upload_to_supabase_storage(file, storage_path):
+    # file: FileStorage (werkzeug)
+    # storage_path: str, e.g. "artistas/123456.jpg"
+    resp = supabase.storage.from_(bucket_name).upload(storage_path, file, file.content_type)
+    if "error" in resp and resp["error"]:
+        raise Exception("Error al subir archivo a Supabase: " + str(resp["error"]))
+    # La url pública puede variar según política del bucket (hazla pública desde el panel de Supabase para facilidad)
+    public_url = f"{supabase_url}/storage/v1/object/public/{bucket_name}/{storage_path}"
+    return public_url
+
 
 # Configure application
 app = Flask(__name__)
@@ -24,8 +43,7 @@ if __name__ == "__main__":
 
 
 # Database connection
-conn = psycopg2.connect(os.environ.get('SUPABASE_URL'))
-# Create a cursor to execute SQL commands
+conn = psycopg2.connect(os.environ["DATABASE_URL"])
 cur = conn.cursor()
 
 
@@ -228,16 +246,12 @@ def register3():
         if image and image.filename != "":
             ext = os.path.splitext(secure_filename(image.filename))[1]
             unique_name = f"{uuid.uuid4().hex}{ext}"
-            # Elige la subcarpeta según el tipo de usuario
             if user_type == "artista":
-                subfolder = "artistas"
+                storage_path = f"artistas/{unique_name}"
             else:
-                subfolder = "venues"
-            folder_path = os.path.join(app.config['UPLOAD_FOLDER'], subfolder)
-            os.makedirs(folder_path, exist_ok=True)  # Crea la carpeta si no existe
-            image_path = os.path.join(folder_path, unique_name)
-            image.save(image_path)
-            image_db_path = f"uploads/{subfolder}/{unique_name}"
+                storage_path = f"venues/{unique_name}"
+            public_url = upload_to_supabase_storage(image, storage_path)
+            image_db_path = public_url  # Así guardas la URL accesible
         else:
             image_db_path = None
 
